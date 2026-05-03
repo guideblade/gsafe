@@ -108,6 +108,7 @@ Passing a container path without a command is shorthand for `gsafe status ~/path
 `gsafe unlock` and `gsafe lock` also accept `--path-gsafe ~/path/repo.gsf` if you prefer named options.
 `gsafe status` asks for the password and prints encrypted container metadata.
 `gsafe change-password` asks for the current password once and the new password twice.
+`gsafe lock --force` allows locking when refs were intentionally deleted or rewritten.
 
 ## Recovery
 

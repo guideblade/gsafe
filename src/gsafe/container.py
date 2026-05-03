@@ -18,7 +18,14 @@ from gsafe.files import (
     resolve_path,
     safe_rmtree,
 )
-from gsafe.git import ensure_fast_forwardable, is_git_lfs_available, run_git, validate_bare_repo, validate_git_repo
+from gsafe.git import (
+    ensure_fast_forwardable,
+    has_remotes,
+    is_git_lfs_available,
+    run_git,
+    validate_bare_repo,
+    validate_git_repo,
+)
 from gsafe.paths import default_origin_path, known_local_machine_id, local_machine_id
 from gsafe.payload import (
     DEFAULT_BRANCH,
@@ -77,7 +84,8 @@ def import_lfs_objects(source_repo_path: Path, bare_repo_path: Path) -> None:
         return
     if not is_git_lfs_available():
         raise GSafeError("git-lfs is required to import LFS objects from this repository.")
-    run_git(["-C", str(source_repo_path), "lfs", "fetch", "--all"])
+    if has_remotes(source_repo_path):
+        run_git(["-C", str(source_repo_path), "lfs", "fetch", "--all"])
     destination_lfs_dir = bare_repo_path / "lfs"
     if destination_lfs_dir.exists():
         safe_rmtree(destination_lfs_dir)
@@ -242,7 +250,8 @@ def lock_container(container_path: Path, origin_path: Path | None, password: str
                 raise GSafeError("Unlocked remote path does not match this container.")
         previous_repo_path = temp_dir / "previous.git"
         restore_repo_from_payload(payload_dir, previous_repo_path)
-        ensure_fast_forwardable(previous_repo_path, resolved_origin_path)
+        if not is_force:
+            ensure_fast_forwardable(previous_repo_path, resolved_origin_path)
         fresh_payload_dir = temp_dir / "fresh-payload"
         fresh_payload_dir.mkdir(parents=True, exist_ok=True)
         snapshot_repo_to_payload(resolved_origin_path, fresh_payload_dir, "locked")

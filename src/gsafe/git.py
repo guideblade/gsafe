@@ -135,6 +135,11 @@ def list_refs(repo_path: Path) -> dict[str, str]:
     return refs
 
 
+def has_remotes(repo_path: Path) -> bool:
+    result = run_git(["-C", str(repo_path), "remote"])
+    return any(line.strip() for line in result.stdout.splitlines())
+
+
 def object_type(repo_path: Path, object_name: str) -> str | None:
     result_code = run_git_check(["-C", str(repo_path), "cat-file", "-e", object_name])
     if result_code != 0:

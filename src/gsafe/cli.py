@@ -93,7 +93,11 @@ def build_parser() -> argparse.ArgumentParser:
     lock_parser.add_argument("container", nargs="?", type=Path, help="Container to lock.")
     lock_parser.add_argument("--path-gsafe", type=Path, help="Container to lock.")
     lock_parser.add_argument("--path-origin", type=Path, help="Bare remote path.")
-    lock_parser.add_argument("--force", action="store_true", help="Lock even when marked as locked.")
+    lock_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Lock even when marked as locked, or when refs were deleted or rewritten.",
+    )
     lock_parser.set_defaults(command_parser=lock_parser)
 
     recover_parser = subparsers.add_parser("recover", help="Recover a stale unlocked container.")
