@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gsafe"
+version = "0.7.0"
+description = "Encrypted portable containers for Git bare remotes."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  { name = "Nikolay Kulikov", email = "nick@guideblade.ru" }
+]
+keywords = ["git", "encryption", "backup", "sync"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Security :: Cryptography",
+  "Topic :: Software Development :: Version Control :: Git",
+  "Topic :: System :: Archiving :: Backup",
+  "Topic :: Utilities"
+]
+dependencies = [
+  "argon2-cffi>=25.1.0",
+  "cryptography>=42.0.0",
+  "platformdirs>=4.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/guideblade/gsafe"
+Repository = "https://github.com/guideblade/gsafe"
+Issues = "https://github.com/guideblade/gsafe/issues"
+Changelog = "https://github.com/guideblade/gsafe/blob/main/CHANGELOG.md"
+
+[project.scripts]
+gsafe = "gsafe.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gsafe"]
