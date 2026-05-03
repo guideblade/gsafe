@@ -1,5 +1,8 @@
 # GSafe
 
+[![PyPI version](https://img.shields.io/pypi/v/gsafe.svg)](https://pypi.org/project/gsafe/)
+[![Python versions](https://img.shields.io/pypi/pyversions/gsafe.svg)](https://pypi.org/project/gsafe/)
+
 GSafe stores a Git bare remote as an encrypted `.gsf` container. It allows you to safely store your repository on third party services like Google Drive, and work with it almost as effortlessly as if you were hosting on GitHub. The storage provider cannot read your data, as the unencrypted remote exists only on your device while the container is unlocked.
 This tool is not really meant for collaboration. Unlock your containers only on one machine at a time and don't forget to wait until the sync finishes before unlocking it on a second machine.
 
@@ -17,15 +20,35 @@ The `gsafe` command is a Python console script. It becomes available after the p
 
 ## Install
 
+### From PyPI
+
+For CLI usage, `pipx` is recommended because it installs `gsafe` into an isolated environment and exposes the command on your `PATH`:
+
+```bash
+pipx install gsafe
+```
+
+If you do not use `pipx`, install with `pip`:
+
+```bash
+python3 -m pip install gsafe
+```
+
+Check that it works:
+
+```bash
+gsafe --version
+```
+
 ### macOS (recommended)
 
 Python on macOS, especially when installed with Homebrew, may block global `pip` installs with an `externally-managed-environment` error.
 
-For CLI usage, install `gsafe` with `pipx` from inside this repository:
+Install with `pipx`:
 
 ```bash
 brew install pipx
-pipx install .
+pipx install gsafe
 ```
 
 Check that it works:
@@ -37,7 +60,7 @@ gsafe --version
 ### From this repository
 
 ```bash
-python3 -m pip install .
+python3 -m pip install git+https://github.com/guideblade/gsafe.git
 ```
 
 ### For local development
