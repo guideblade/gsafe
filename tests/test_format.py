@@ -90,14 +90,28 @@ def tar_gz_with_member(name: str) -> bytes:
     return buffer.getvalue()
 
 
-def test_extract_rejects_parent_traversal(tmp_path: Path) -> None:
+@pytest.fixture(params=["filter", "fallback"])
+def extraction_mode(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> str:
+    if request.param == "fallback":
+        original_extractall = tarfile.TarFile.extractall
+
+        def extractall_without_filter(self, *args, **kwargs):
+            if "filter" in kwargs:
+                raise TypeError("extractall() got an unexpected keyword argument 'filter'")
+            return original_extractall(self, *args, **kwargs)
+
+        monkeypatch.setattr(tarfile.TarFile, "extractall", extractall_without_filter)
+    return request.param
+
+
+def test_extract_rejects_parent_traversal(tmp_path: Path, extraction_mode: str) -> None:
     destination = tmp_path / "destination"
-    with pytest.raises(GSafeError, match="Payload archive is invalid"):
+    with pytest.raises(GSafeError, match="Payload (archive is invalid|contains an invalid tar path)"):
         extract_tar_gz_bytes(tar_gz_with_member("../escape.txt"), destination)
     assert not (tmp_path / "escape.txt").exists()
 
 
-def test_extract_keeps_absolute_paths_inside_destination(tmp_path: Path) -> None:
+def test_extract_keeps_absolute_paths_inside_destination(tmp_path: Path, extraction_mode: str) -> None:
     destination = tmp_path / "destination"
     name = f"{tmp_path.as_posix()}/absolute.txt"
     try:
