@@ -8,7 +8,9 @@ from pathlib import Path
 from gsafe import __version__
 from gsafe.container import (
     VALID_CONTAINER_EXTENSIONS,
+    ContainerStatus,
     change_container_password,
+    ensure_origin_path_available,
     get_container_status,
     init_container,
     lock_container,
@@ -86,7 +88,11 @@ def build_parser() -> argparse.ArgumentParser:
     unlock_parser.add_argument("container", nargs="?", type=Path, help="Container to unlock.")
     unlock_parser.add_argument("--path-gsafe", type=Path, help="Container to unlock.")
     unlock_parser.add_argument("--path-origin", type=Path, help="Bare remote output path.")
-    unlock_parser.add_argument("--force", action="store_true", help="Unlock even when marked as unlocked.")
+    unlock_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Unlock even when marked as unlocked, replacing a leftover unlocked remote of this container.",
+    )
     unlock_parser.set_defaults(command_parser=unlock_parser)
 
     lock_parser = subparsers.add_parser("lock", help="Lock an unlocked bare remote back into the container.")
@@ -188,6 +194,7 @@ def validate_unlock_before_password(container_path: Path, origin_path: Path | No
     resolved_origin_path = resolve_path(origin_path) if origin_path else default_origin_path(container_path)
     if is_path_within(container_path, resolved_origin_path):
         raise GSafeError(f"Origin path must not contain the container file: {resolved_origin_path}")
+    ensure_origin_path_available(resolved_origin_path)
 
 
 def validate_lock_before_password(origin_path: Path | None) -> None:
@@ -209,7 +216,7 @@ def format_optional_bool(value: bool | None) -> str:
     return "no"
 
 
-def print_status(status) -> None:
+def print_status(status: ContainerStatus) -> None:
     print(f"Container: {status.container_path}")
     print(f"State: {status.state}")
     print(f"Payload version: {status.version}")
@@ -279,6 +286,12 @@ def main(argv: list[str] | None = None) -> int:
     except (GSafeError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
+    except EOFError:
+        print("\nError: Input ended before a required answer was given.", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        print("\nCancelled.", file=sys.stderr)
+        return 130
     return 0
 
 

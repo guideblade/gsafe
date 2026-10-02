@@ -21,6 +21,7 @@ from gsafe.files import (
 from gsafe.git import (
     ensure_fast_forwardable,
     has_remotes,
+    is_bare_repo,
     is_git_lfs_available,
     run_git,
     validate_bare_repo,
@@ -30,6 +31,7 @@ from gsafe.paths import default_origin_path, known_local_machine_id, local_machi
 from gsafe.payload import (
     DEFAULT_BRANCH,
     UNLOCK_TOKEN_NAME,
+    Manifest,
     load_manifest,
     restore_repo_from_payload,
     snapshot_repo_to_payload,
@@ -173,6 +175,70 @@ def init_container(
     return container_path
 
 
+def read_unlock_token(remote_repo_path: Path) -> dict[str, object]:
+    token_path = remote_repo_path / UNLOCK_TOKEN_NAME
+    if not token_path.exists():
+        raise GSafeError(f"Unlocked remote is missing {UNLOCK_TOKEN_NAME}: {remote_repo_path}")
+    try:
+        data = json.loads(token_path.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise GSafeError(f"Unlocked remote token is invalid: {token_path}") from error
+    if not isinstance(data, dict):
+        raise GSafeError(f"Unlocked remote token is invalid: {token_path}")
+    return data
+
+
+def is_empty_dir(path: Path) -> bool:
+    return path.is_dir() and not path.is_symlink() and not any(path.iterdir())
+
+
+def is_unlocked_remote(path: Path) -> bool:
+    return (path / UNLOCK_TOKEN_NAME).is_file() and is_bare_repo(path)
+
+
+def is_unlocked_remote_of(remote_repo_path: Path, container_path: Path, manifest: Manifest) -> bool:
+    if not is_unlocked_remote(remote_repo_path):
+        return False
+    try:
+        token_payload = read_unlock_token(remote_repo_path)
+    except GSafeError:
+        return False
+    if manifest.unlock_token and token_payload.get("unlock_token") == manifest.unlock_token:
+        return True
+    token_container_path = token_payload.get("container_path")
+    return isinstance(token_container_path, str) and resolve_path(Path(token_container_path)) == container_path
+
+
+def ensure_origin_path_available(origin_path: Path) -> None:
+    if not origin_path.exists() or is_empty_dir(origin_path) or is_unlocked_remote(origin_path):
+        return
+    raise GSafeError(
+        f"Origin path already exists and is not an unlocked GSafe remote: {origin_path}\n"
+        "Move it away or choose another --path-origin."
+    )
+
+
+def ensure_origin_path_replaceable(
+    origin_path: Path,
+    container_path: Path,
+    manifest: Manifest,
+    is_force: bool,
+) -> None:
+    if not origin_path.exists() or is_empty_dir(origin_path):
+        return
+    if not is_unlocked_remote_of(origin_path, container_path, manifest):
+        raise GSafeError(
+            f"Origin path already exists and is not an unlocked remote of this container: {origin_path}\n"
+            "Move it away or choose another --path-origin."
+        )
+    if not is_force:
+        raise GSafeError(
+            f"Origin path already exists: {origin_path}\n"
+            "It may contain commits that were never locked into the container. "
+            "Move it away, or use --force to replace it."
+        )
+
+
 def unlock_container(container_path: Path, origin_path: Path | None, password: str, is_force: bool) -> Path:
     resolved_container_path = resolve_path(container_path)
     resolved_origin_path = resolve_path(origin_path) if origin_path else default_origin_path(resolved_container_path)
@@ -185,6 +251,7 @@ def unlock_container(container_path: Path, origin_path: Path | None, password: s
         manifest = load_manifest(payload_dir)
         if manifest.state == "unlocked" and not is_force:
             raise GSafeError(f"Container is already unlocked at: {manifest.origin_path}")
+        ensure_origin_path_replaceable(resolved_origin_path, resolved_container_path, manifest, is_force)
         remote_repo_path = temp_dir / "remote.git"
         restore_repo_from_payload(payload_dir, remote_repo_path)
         token = uuid.uuid4().hex
@@ -211,19 +278,6 @@ def unlock_container(container_path: Path, origin_path: Path | None, password: s
         )
         write_container_payload(resolved_container_path, payload_dir, password)
     return resolved_origin_path
-
-
-def read_unlock_token(remote_repo_path: Path) -> dict[str, object]:
-    token_path = remote_repo_path / UNLOCK_TOKEN_NAME
-    if not token_path.exists():
-        raise GSafeError(f"Unlocked remote is missing {UNLOCK_TOKEN_NAME}: {remote_repo_path}")
-    try:
-        data = json.loads(token_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as error:
-        raise GSafeError(f"Unlocked remote token is invalid: {token_path}") from error
-    if not isinstance(data, dict):
-        raise GSafeError(f"Unlocked remote token is invalid: {token_path}")
-    return data
 
 
 def lock_container(container_path: Path, origin_path: Path | None, password: str, is_force: bool) -> Path:

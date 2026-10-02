@@ -70,7 +70,13 @@ Use a virtual environment so the editable install points to this repository with
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install -e .
+python3 -m pip install -e ".[test]"
+```
+
+Run the tests:
+
+```bash
+python3 -m pytest
 ```
 
 Check that it works:
@@ -109,6 +115,7 @@ Passing a container path without a command is shorthand for `gsafe status ~/path
 `gsafe status` asks for the password and prints encrypted container metadata.
 `gsafe change-password` asks for the current password once and the new password twice.
 `gsafe lock --force` allows locking when refs were intentionally deleted or rewritten.
+`gsafe unlock` never replaces an existing directory unless it is empty or a leftover unlocked remote of the same container; replacing a leftover remote requires `--force`.
 
 ## Recovery
 
@@ -119,3 +126,5 @@ gsafe recover ~/path/repo.gsf
 ```
 
 Recovery asks you to type `RECOVER`. It clears the stale unlock marker, but it cannot save commits that existed only in the old unlocked remote.
+
+If the old unlocked remote is still on this machine, the next `gsafe unlock` stops before replacing it. Copy out anything you still need, then run `gsafe unlock --force` to replace it.

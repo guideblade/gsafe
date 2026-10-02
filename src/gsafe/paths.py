@@ -35,7 +35,9 @@ def read_machine_id(path: Path) -> str | None:
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
         return None
     machine_id = data.get("machine_id")
     if isinstance(machine_id, str) and machine_id:

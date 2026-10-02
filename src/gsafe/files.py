@@ -28,10 +28,19 @@ def atomic_write_bytes(path: Path, data: bytes) -> None:
         delete=False,
     ) as file:
         temporary_path = Path(file.name)
-        file.write(data)
-        file.flush()
-        os.fsync(file.fileno())
-    os.replace(temporary_path, path)
+        try:
+            file.write(data)
+            file.flush()
+            os.fsync(file.fileno())
+        except BaseException:
+            file.close()
+            temporary_path.unlink(missing_ok=True)
+            raise
+    try:
+        os.replace(temporary_path, path)
+    except BaseException:
+        temporary_path.unlink(missing_ok=True)
+        raise
 
 
 def is_path_within(path: Path, parent: Path) -> bool:

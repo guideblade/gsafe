@@ -32,6 +32,11 @@ dependencies = [
   "platformdirs>=4.0.0"
 ]
 
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0.0"
+]
+
 [project.urls]
 Homepage = "https://github.com/guideblade/gsafe"
 Repository = "https://github.com/guideblade/gsafe"
@@ -43,3 +48,6 @@ gsafe = "gsafe.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/gsafe"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

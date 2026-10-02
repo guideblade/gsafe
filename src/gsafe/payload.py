@@ -14,6 +14,7 @@ from gsafe.git import (
 )
 
 MANIFEST_NAME = "manifest.json"
+MANIFEST_VERSION = 1
 BUNDLE_NAME = "repo.bundle"
 REPO_METADATA_DIR_NAME = "repo-meta"
 UNLOCK_TOKEN_NAME = "gsafe-unlock.json"
@@ -69,6 +70,10 @@ class Manifest:
         unlock_token = payload.get("unlock_token")
         if not isinstance(version, int) or isinstance(version, bool):
             raise GSafeError("Manifest version metadata is invalid.")
+        if version > MANIFEST_VERSION:
+            raise GSafeError(
+                f"Unsupported payload version: {version}. Upgrade gsafe to open this container."
+            )
         if state not in {"locked", "unlocked"}:
             raise GSafeError("Manifest state metadata is invalid.")
         if not isinstance(is_bundle_present, bool):
@@ -158,7 +163,7 @@ def snapshot_repo_to_payload(remote_repo_path: Path, payload_dir: Path, state: s
         run_git(["-C", str(remote_repo_path), "bundle", "create", str(payload_dir / BUNDLE_NAME), "--all"])
     snapshot_repo_metadata(remote_repo_path, payload_dir)
     manifest = Manifest(
-        version=1,
+        version=MANIFEST_VERSION,
         state=state,
         is_bundle_present=is_bundle_present,
         head_contents=manifest_head_contents_for_repo(remote_repo_path),
